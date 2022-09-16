@@ -11,7 +11,7 @@ import fasttext
 
 import warnings
 
-from mycredentials import antiSMI
+from config import db_config
 
 warnings.filterwarnings("ignore")
 fasttext.FastText.eprint = lambda x: None
@@ -31,7 +31,11 @@ black_labels = ("ДАННОЕ СООБЩЕНИЕ (МАТЕРИАЛ) СОЗДАН
                 '*Власти считают иноагентом  ')
 
 
-current_engine = create_engine(f'postgresql+psycopg2://{antiSMI[1]}:{antiSMI[2]}@localhost/{antiSMI[0]}')
+database = 'antiSMI'
+db_username = db_config[database]['login']
+db_pwrd = db_config[database]['pwrd']
+
+current_engine = create_engine(f'postgresql+psycopg2://{database}:{db_username}@localhost/{db_pwrd}')
 
 def article2summary(article_text: str) -> str:
 	"""Делает краткое саммари из новости"""
@@ -70,8 +74,8 @@ def summary2title(summary: str) -> str:
 	return title
 
 
-def make_clean_text(article: str, date: int) -> dict:
-	"""Обрабатывает полученную страницу новости, извлекает нужное и помещает в создаваемый словарь"""
+def one_news2dict(article: str, date: int) -> dict:
+	"""Обрабатывает полученную страницу новости за дату, извлекает нужное и помещает в создаваемый словарь"""
 	soup = BeautifulSoup(article, features="lxml")
 
 	first_a = soup.find('a')
@@ -93,7 +97,7 @@ def make_clean_text(article: str, date: int) -> dict:
 	return news_dict
 
 
-def make_articles_dict(channel_name: str) -> dict:
+def all_news2dict(channel_name: str) -> dict:
 	"""Получает страницу с новостью, отдаёт её на обработку, и завершает формирование словаря использовав полученное"""
 	answer = requests.get('https://tg.i-c-a.su/json/' + channel_name)
 	data = answer.json()
@@ -113,8 +117,8 @@ def make_articles_dict(channel_name: str) -> dict:
 
 	# получение двух предварительных словарей.
 
-	# для словаря draft_articles часть парсинга сообщения и даты передаётся на аутсорс в функцию make_clean_text
-	draft_articles = [make_clean_text(messages[el[0]]['message'], messages[el[0]]['date']) for el in id_articles if
+	# для словаря draft_articles часть парсинга сообщения и даты передаётся на аутсорс в функцию one_news2dict
+	draft_articles = [one_news2dict(messages[el[0]]['message'], messages[el[0]]['date']) for el in id_articles if
 	                  messages[el[0]]['message']]
 	# это окончательный словарь, но он может содержать пустые статьи, если пост был не текстовым
 	articles_dict = {id_articles[el][1]: draft_articles[el] for el in range(len(id_articles))}
@@ -132,7 +136,7 @@ def agency2db(channel_name: str) -> pd.DataFrame:
 	channel_name -> channel_dict -> pd.df(channel_news) -> wright to bd
 	Получает словарь текущего СМИ по его названию и записывает его в БД, предварительно обработав
 	"""
-	channel_dict = make_articles_dict(channel_name)
+	channel_dict = all_news2dict(channel_name)
 	if channel_dict:
 		df = pd.DataFrame(channel_dict).T
 		df['category'] = df['short_news'].apply(
@@ -144,21 +148,21 @@ def agency2db(channel_name: str) -> pd.DataFrame:
 		return df
 
 
-async def join_all(agency_list: list):
-	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
-	start_time = pd.to_datetime("today")
-	print(f'Начинаю сбор текущих новостей:\n')
-	for agency in agency_list:
-		print(f'Собираю {agency}...')
-		try:
-			agency2db(agency)
-		except TypeError:
-			pass
-		print(f'................... complited')
-	finish_time = pd.to_datetime("today")
-	duration = str(pd.to_timedelta(finish_time - start_time))
-	print(f'\nCбор новостей завершен в {str(datetime.now().time())}')
-	print(f'Уложились за {duration}\n')
-	print('-------------------------------------------------------------------------------------------')
-	print(f'-------------------------------------------------------------------------------------------\n')
-	make_file_backup('db.db')
+# async def join_all(agency_list: list):
+# 	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
+# 	start_time = pd.to_datetime("today")
+# 	print(f'Начинаю сбор текущих новостей:\n')
+# 	for agency in agency_list:
+# 		print(f'Собираю {agency}...')
+# 		try:
+# 			agency2db(agency)
+# 		except TypeError:
+# 			pass
+# 		print(f'................... complited')
+# 	finish_time = pd.to_datetime("today")
+# 	duration = str(pd.to_timedelta(finish_time - start_time))
+# 	print(f'\nCбор новостей завершен в {str(datetime.now().time())}')
+# 	print(f'Уложились за {duration}\n')
+# 	print('-------------------------------------------------------------------------------------------')
+# 	print(f'-------------------------------------------------------------------------------------------\n')
+# 	make_file_backup('db.db')
