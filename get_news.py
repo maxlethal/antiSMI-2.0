@@ -1,41 +1,5 @@
-import pandas as pd
-from datetime import datetime
-from sqlalchemy import create_engine
+from imports import *
 
-import requests
-from bs4 import BeautifulSoup
-
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from transformers import T5ForConditionalGeneration
-import fasttext
-
-import warnings
-
-from config import db_config
-
-warnings.filterwarnings("ignore")
-fasttext.FastText.eprint = lambda x: None
-
-model_class = fasttext.load_model("models//cat_model.ftz")
-
-tokenizer_resume = AutoTokenizer.from_pretrained("IlyaGusev/mbart_ru_sum_gazeta")
-model_resume = AutoModelForSeq2SeqLM.from_pretrained("IlyaGusev/mbart_ru_sum_gazeta")
-
-tokenizer_title = AutoTokenizer.from_pretrained("IlyaGusev/rut5_base_headline_gen_telegram")
-model_title = T5ForConditionalGeneration.from_pretrained("IlyaGusev/rut5_base_headline_gen_telegram")
-
-black_labels = ("ДАННОЕ СООБЩЕНИЕ (МАТЕРИАЛ) СОЗДАНО И (ИЛИ) РАСПРОСТРАНЕНО ИНОСТРАННЫМ СРЕДСТВОМ МАССОВОЙ ИНФОРМАЦИИ, "
-                "ВЫПОЛНЯЮЩИМ ФУНКЦИИ ИНОСТРАННОГО АГЕНТА, И (ИЛИ) РОССИЙСКИМ ЮРИДИЧЕСКИМ ЛИЦОМ, ВЫПОЛНЯЮЩИМ ФУНКЦИИ "
-                "ИНОСТРАННОГО АГЕНТА",
-                '  Поддержите The Village подпиской https://redefine.media/about (подробная инструкция здесь)',
-                '*Власти считают иноагентом  ')
-
-
-database = 'antiSMI'
-db_username = db_config[database]['login']
-db_pwrd = db_config[database]['pwrd']
-
-current_engine = create_engine(f'postgresql+psycopg2://{database}:{db_username}@localhost/{db_pwrd}')
 
 def article2summary(article_text: str) -> str:
 	"""Делает краткое саммари из новости"""
@@ -80,19 +44,19 @@ def one_news2dict(article: str, date: int) -> dict:
 
 	first_a = soup.find('a')
 	try:
-		first_link = first_a.get('href')
-		if first_link.startswith('tg://resolve?domain='):
-			first_link = 'NaN'
+		links = first_a.get('href')
+		if links.startswith('tg://resolve?domain='):
+			links = 'NaN'
 	except AttributeError:
-		first_link = 'NaN'
+		links = 'NaN'
 
 	text = soup.get_text()
 	text = text.replace("\xa0", ' ').replace("\n", ' ')
 	for label in black_labels:
 		text = text.replace(label, '\n')
-	short_news = article2summary(text)
-	title = summary2title(short_news)
-	news_dict = {'date': date, 'title': title, 'short_news': short_news, 'first_link': first_link, 'raw_news': text}
+	resume = article2summary(text)
+	title = summary2title(resume)
+	news_dict = {'date': date, 'title': title, 'resume': resume, 'links': links, 'news': text}
 
 	return news_dict
 
@@ -106,9 +70,10 @@ def all_news2dict(channel_name: str) -> dict:
 	# вытаскиваем из нашей базы статей id последней статьи текущего медиа, чтобы не обрабатывать уже отработанное
 	try:
 		start_id = int(
-			pd.read_sql(f"SELECT url FROM news WHERE date = (SELECT max(date) FROM news WHERE agency = '{agency}')",
-			            current_engine).values[0][0].split('/')[-1])
-	except NameError:
+			pd.read_sql(
+				f"SELECT url FROM news WHERE date = (SELECT max(date) FROM news WHERE agency = '{channel_name}')",
+				asmi_engine).values[0][0].split('/')[-1])
+	except (NameError, IndexError):
 		start_id = 0  # если данное СМИ парсится впервые
 
 	# выбираем только те статьи, которые старше последней
@@ -124,7 +89,7 @@ def all_news2dict(channel_name: str) -> dict:
 	articles_dict = {id_articles[el][1]: draft_articles[el] for el in range(len(id_articles))}
 
 	# поэтому удаляем пустые статьи
-	empty_keys = [k for k, v in articles_dict.items() if not v['raw_news']]
+	empty_keys = [k for k, v in articles_dict.items() if not v['news']]
 	for k in empty_keys:
 		del articles_dict[k]
 
@@ -139,30 +104,31 @@ def agency2db(channel_name: str) -> pd.DataFrame:
 	channel_dict = all_news2dict(channel_name)
 	if channel_dict:
 		df = pd.DataFrame(channel_dict).T
-		df['category'] = df['short_news'].apply(
+		df['category'] = df['resume'].apply(
 			lambda x: model_class.predict(x)[0][0].split('__')[-1])  # классифицируем fasttext-ом, достаём класс
 		df = df.loc[df['category'] != 'not_news']  # удаляем новости, которые классификатор не признал новостями
 		df['date'] = df['date'].apply(lambda x: datetime.fromtimestamp(x))  # преобразовываем timestamp-число в дату
 		df['agency'] = channel_name
-		df.to_sql(name='news', con=current_engine, if_exists='append', index=True)
+		df['url'] = df.index
+		df['url'] = df.apply(lambda x: ('https://t.me/' + str(x[6]) + '/' + str(x[7])), axis=1)
+		df.to_sql(name='news', con=asmi_engine, if_exists='append', index=False)
 		return df
 
 
-# async def join_all(agency_list: list):
-# 	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
-# 	start_time = pd.to_datetime("today")
-# 	print(f'Начинаю сбор текущих новостей:\n')
-# 	for agency in agency_list:
-# 		print(f'Собираю {agency}...')
-# 		try:
-# 			agency2db(agency)
-# 		except TypeError:
-# 			pass
-# 		print(f'................... complited')
-# 	finish_time = pd.to_datetime("today")
-# 	duration = str(pd.to_timedelta(finish_time - start_time))
-# 	print(f'\nCбор новостей завершен в {str(datetime.now().time())}')
-# 	print(f'Уложились за {duration}\n')
-# 	print('-------------------------------------------------------------------------------------------')
-# 	print(f'-------------------------------------------------------------------------------------------\n')
-# 	make_file_backup('db.db')
+async def join_all(agency_list: list):
+	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
+	start_time = pd.to_datetime("today")
+	print(f'Начинаю сбор текущих новостей:\n')
+	for agency in agency_list:
+		print(f'Собираю {agency}...')
+		try:
+			agency2db(agency)
+		except TypeError:
+			pass
+		print(f'................... complited')
+	finish_time = pd.to_datetime("today")
+	duration = str(pd.to_timedelta(finish_time - start_time))
+	print(f'\nCбор новостей завершен в {str(datetime.now().time())}')
+	print(f'Уложились за {duration}\n')
+	print('-------------------------------------------------------------------------------------------')
+	print(f'-------------------------------------------------------------------------------------------\n')
