@@ -1,4 +1,4 @@
-from imports import *
+from imports_get import *
 
 
 def article2summary(article_text: str) -> str:
@@ -63,7 +63,7 @@ def one_news2dict(article: str, date: int) -> dict:
 
 def all_news2dict(channel_name: str) -> dict:
 	"""Получает страницу с новостью, отдаёт её на обработку, и завершает формирование словаря использовав полученное"""
-	answer = requests.get('https://tg.i-c-a.su/json/' + channel_name)
+	answer = requests.get(db_config['tel_gate']['url'] + channel_name)
 	data = answer.json()
 	messages = data['messages']
 
@@ -117,6 +117,7 @@ def agency2db(channel_name: str) -> pd.DataFrame:
 
 async def join_all(agency_list: list):
 	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
+	start_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi_engine)['count'].to_list()[0])
 	start_time = pd.to_datetime("today")
 	print(f'Начинаю сбор текущих новостей:\n')
 	for agency in agency_list:
@@ -126,9 +127,10 @@ async def join_all(agency_list: list):
 		except TypeError:
 			pass
 		print(f'................... complited')
+	end_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi_engine)['count'].to_list()[0])
 	finish_time = pd.to_datetime("today")
 	duration = str(pd.to_timedelta(finish_time - start_time))
-	print(f'\nCбор новостей завершен в {str(datetime.now().time())}')
-	print(f'Уложились за {duration}\n')
-	print('-------------------------------------------------------------------------------------------')
+	news_amount = end_news_amount - start_news_amount
+	print(f'Собрано {news_amount} новостей за {duration}\n')
+	print(f'\nЗавершено в {str(datetime.now().time())}\n')
 	print(f'-------------------------------------------------------------------------------------------\n')
