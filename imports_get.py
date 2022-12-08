@@ -14,7 +14,7 @@ import fasttext
 
 import warnings
 
-from config import db_config
+from config import config
 
 warnings.filterwarnings("ignore")
 fasttext.FastText.eprint = lambda x: None
@@ -33,10 +33,10 @@ black_labels = ("ДАННОЕ СООБЩЕНИЕ (МАТЕРИАЛ) СОЗДАН
                 '  Поддержите The Village подпиской https://redefine.media/about (подробная инструкция здесь)',
                 '*Власти считают иноагентом  ')
 
-db = 'aSMI'
-db_user = db_config[db]['login']
-db_pwd = db_config[db]['pwd']
-db_name = db_config[db]['db']
-db_host = db_config[db]['host']
 
-asmi_engine = create_engine(f'postgresql+psycopg2://{db_user}:{db_pwd}@{db_host}/{db_name}')
+db_user = config['db']['login']
+db_pass = config['db']['pass']
+db_name = config['db']['name']
+db_host = config['db']['host']
+
+asmi = create_engine(f'postgresql+psycopg2://{db_user}:{db_pass}@{db_host}/{db_name}')

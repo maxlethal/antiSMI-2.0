@@ -63,7 +63,7 @@ def one_news2dict(article: str, date: int) -> dict:
 
 def all_news2dict(channel_name: str) -> dict:
 	"""Получает страницу с новостью, отдаёт её на обработку, и завершает формирование словаря использовав полученное"""
-	answer = requests.get(db_config['tel_gate']['url'] + channel_name)
+	answer = requests.get(config['bot']['gate'] + channel_name)
 	data = answer.json()
 	messages = data['messages']
 
@@ -72,7 +72,7 @@ def all_news2dict(channel_name: str) -> dict:
 		start_id = int(
 			pd.read_sql(
 				f"SELECT url FROM news WHERE date = (SELECT max(date) FROM news WHERE agency = '{channel_name}')",
-				asmi_engine).values[0][0].split('/')[-1])
+				asmi).values[0][0].split('/')[-1])
 	except (NameError, IndexError):
 		start_id = 0  # если данное СМИ парсится впервые
 
@@ -111,13 +111,13 @@ def agency2db(channel_name: str) -> pd.DataFrame:
 		df['agency'] = channel_name
 		df['url'] = df.index
 		df['url'] = df.apply(lambda x: ('https://t.me/' + str(x[6]) + '/' + str(x[7])), axis=1)
-		df.to_sql(name='news', con=asmi_engine, if_exists='append', index=False)
+		df.to_sql(name='news', con=asmi, if_exists='append', index=False)
 		return df
 
 
 async def join_all(agency_list: list):
 	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
-	start_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi_engine)['count'].to_list()[0])
+	start_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi)['count'].to_list()[0])
 	start_time = pd.to_datetime("today")
 	print(f'Начинаю сбор текущих новостей:\n')
 	for agency in agency_list:
@@ -127,10 +127,10 @@ async def join_all(agency_list: list):
 		except TypeError:
 			pass
 		print(f'................... complited')
-	end_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi_engine)['count'].to_list()[0])
+	end_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi)['count'].to_list()[0])
 	finish_time = pd.to_datetime("today")
 	duration = str(pd.to_timedelta(finish_time - start_time))
 	news_amount = end_news_amount - start_news_amount
-	print(f'Собрано {news_amount} новостей за {duration}\n')
-	print(f'\nЗавершено в {str(datetime.now().time())}\n')
+	print(f'\nСобрано {news_amount} новостей за {duration}')
+	print(f'Завершено в {str(datetime.now().time())}\n')
 	print(f'-------------------------------------------------------------------------------------------\n')

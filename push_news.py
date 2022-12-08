@@ -21,7 +21,7 @@ def news2emb(news: str) -> np.ndarray:
 	return news_emb
 
 
-def date_news(parse_date=str(datetime.now().date()), part_number=0):
+def date_news(parse_date: str = str(datetime.now().date()), part_number: int = 0) -> tuple[pd.DataFrame, list, list]:
 	"""новости на дату в формате YYYY-MM-DD -> dataframe, short_news_list, embeddings"""
 	# Для утренней подборки стартовая дата должна быть вчерашней
 	if part_number != 1:
@@ -36,13 +36,13 @@ def date_news(parse_date=str(datetime.now().date()), part_number=0):
 	else:
 		start_time = start_parse_date + ' ' + '00:00:00'
 		finish_time = parse_date + ' ' + '23:59:59'
-	news_df = pd.read_sql(f"SELECT * FROM news WHERE news.date BETWEEN '{start_time}' AND '{finish_time}'", asmi_engine)
+	news_df = pd.read_sql(f"SELECT * FROM news WHERE news.date BETWEEN '{start_time}' AND '{finish_time}'", asmi)
 	list_news = news_df.title.to_list()
 	embeddings = [news2emb(news) for news in list_news]
 	return news_df, list_news, embeddings
 
 
-def show_date(parse_date=str(datetime.now().date()), part_number=0) -> pd.DataFrame:
+def show_date(parse_date: str = str(datetime.now().date()), part_number: int = 0) -> pd.DataFrame:
 	"""
 	Группировка новостей алгоритмом агломеративной кластеризации: labels (получаем через дату и период) -> pandas.df
 	Для просмотра кластера в функцию нужно передать дату в формате YYYY-MM-DD и временной интервал (при необходимости)
@@ -51,7 +51,7 @@ def show_date(parse_date=str(datetime.now().date()), part_number=0) -> pd.DataFr
 	или обрабатывать сразу все сутки (0, парсится по умолчанию)
 	"""
 	date_df, day_news_list, embeddings = date_news(parse_date, part_number)
-	# Если новости за ночь не появились и новостной датафрейм оказался пустым - отдаём новости прошедшего дня
+	# Если за ночь новостей не появились и новостной датафрейм пустой - отдаём новости прошедшего дня
 	if date_df.empty:
 		parse_date = str((datetime.strptime(parse_date, '%Y-%m-%d') - timedelta(days=1)).date())
 		date_df, day_news_list, embeddings = date_news(parse_date)
@@ -66,17 +66,17 @@ def show_date(parse_date=str(datetime.now().date()), part_number=0) -> pd.DataFr
 	return date_df
 
 
-def get_user_settings(username: int) -> tuple:
+def get_user_settings(username: int) -> tuple[list, bool, bool, bool]:
 	"""Забирает настройки пользователя по его имени"""
-	find_user_list = pd.read_sql(f"SELECT username FROM users WHERE username = '{username}'", asmi_engine).any()
+	find_user_list = pd.read_sql(f"SELECT username FROM users WHERE username = '{username}'", asmi).any()
 	if not find_user_list.any():
 		username = 999999999
 	user_settings = pd.read_sql(
 		f"SELECT * FROM user_settings WHERE username = '{username}'",
-		asmi_engine)
-	is_subscribed = user_settings.iloc[0].to_list()[1]
-	news_amount = user_settings.iloc[0].to_list()[2]
-	is_header = user_settings.iloc[0].to_list()[3]
+		asmi)
+	is_subscribed = user_settings.iloc[0].is_subscribed.tolist()
+	news_amount = user_settings.iloc[0].news_amount.tolist()
+	is_header = user_settings.iloc[0].show_header.tolist()
 	user_cat_df = user_settings[['technology', 'science', 'economy', 'entertainment', 'sports', 'society']].T
 	user_categories = user_cat_df[user_cat_df[0] == True].index.to_list()
 	return user_categories, news_amount, is_subscribed, is_header
@@ -115,7 +115,7 @@ def show_title_4category(user_news_dict: dict, category: str) -> dict:
 
 
 def show_full_news(user_news_dict: dict, category: str, label: int) -> tuple:
-	"""Отдаёт подробные сведения о запрошенной новости"""
+	"""Отдаёт подробные сведения о запрошенной новости tuple (date, resume, links)"""
 	resume = user_news_dict[category].loc[label].resume
 	links = user_news_dict[category].loc[label].links
 	date = user_news_dict[category].loc[label].date.strftime('%d %B %Y - %H:%M:%S')
