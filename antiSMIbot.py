@@ -1,7 +1,7 @@
 from push_news import *
 
 
-def user_digest(username: int, parse_date: str = str(datetime.now().date()), part_number: int = 0) -> str:
+def user_digest(username: int, parse_date: str = str(datetime.now().date()), part_number: int = 0):
 	"""
 	Направляет пользователю подборку новостей (дайджест) согласно его запроса и настроек
 	Дата и временной интервал последнего запрошенного пользователем дайджеста фиксируются в отдельной таблице базы
@@ -58,11 +58,11 @@ def user_digest(username: int, parse_date: str = str(datetime.now().date()), par
 			asmi.execute(
 				f"UPDATE user_digest SET part_number='{part_number}', digest_date='{parse_date}' WHERE username = '{username}'")
 
-		# bot.send_message(username,
-		#                  f'📌 По заголовку можно прочесть новость подробно: \n'
-		#                  f'отправь координаты через пробел\n'
-		#                  f'("5 7" направит 7-ую новость 5-ой рубрики)')
-		return my_news  # Убрать сохранение подборки после завершения настройки
+
+# bot.send_message(username,
+#                  f'📌 По заголовку можно прочесть новость подробно: \n'
+#                  f'отправь координаты через пробел\n'
+#                  f'("5 7" направит 7-ую новость 5-ой рубрики)')
 
 
 def get_full_news(username: int, message: str):
@@ -76,7 +76,7 @@ def get_full_news(username: int, message: str):
 		user_categories, news_amount, is_subscribed, is_header = get_user_settings(username)
 		category_number, label = map(int, message.split(' '))
 		category = user_categories[category_number - 1]
-		date_df = show_date(digest_date, digest_part)
+		date_df = show_date(str(digest_date), digest_part)
 		if is_subscribed is True:
 			user_news_dict = pick_usernews_dict(date_df, username)
 		else:
@@ -115,7 +115,32 @@ def redefine_user_settings(username: int, categories_letter: str, news_amount: i
 		for category in new_category:
 			user_settings[category].iloc[0] = True
 		user_settings['news_amount'].iloc[0] = news_amount
-		user_settings.to_sql(name='user_settings', con=asmi, if_exists='append', index=False)
+
+		is_subscribed = user_settings.is_subscribed.iloc[0]
+		news_amount = user_settings.news_amount.iloc[0]
+		show_header = user_settings.show_header.iloc[0]
+		technology = user_settings.technology.iloc[0]
+		science = user_settings.science.iloc[0]
+		economy = user_settings.economy.iloc[0]
+		entertainment = user_settings.entertainment.iloc[0]
+		sports = user_settings.sports.iloc[0]
+		society = user_settings.society.iloc[0]
+		asmi.execute(
+			f"UPDATE "
+			f"user_settings "
+			f"SET "
+			f"is_subscribed='{is_subscribed}', "
+			f"news_amount='{news_amount}',"
+			f"show_header='{show_header}',"
+			f"technology='{technology}', "
+			f"science='{science}', "
+			f"economy='{economy}', "
+			f"entertainment='{entertainment}', "
+			f"sports='{sports}', "
+			f"society='{society}' "
+			f"WHERE "
+			f"username = '{username}'")
+		# user_settings.to_sql(name='user_settings', con=asmi, if_exists='append', index=False)
 		return user_settings
 
 
@@ -169,9 +194,11 @@ def handle_subscribe(message):
 		bot.send_message(username, success_subscribed_text)
 	#  если пользователь подписывался раннее, но отписался
 	elif username not in subscribed_users:
-		user_settings = pd.read_sql(f"SELECT * FROM user_settings WHERE username = '{username}'", asmi)
-		user_settings.is_subscribed = True
-		user_settings.to_sql(name='user_settings', con=asmi, if_exists='append', index=False)
+		# user_settings = pd.read_sql(f"SELECT * FROM user_settings WHERE username = '{username}'", asmi)
+		# user_settings.is_subscribed = True
+		# user_settings.to_sql(name='user_settings', con=asmi, if_exists='append', index=False)
+		asmi.execute(f"UPDATE user_settings SET is_subscribed = True WHERE username = '{username}'")
+
 		bot.send_message(username, success_subscribed_text)
 
 	#  если пользователь зачем-то захотел подписаться повторно
@@ -188,9 +215,11 @@ def handle_unsubscribe(message):
 	subscribed_users = pd.read_sql(f"SELECT username FROM user_settings WHERE is_subscribed is True", asmi)
 	subscribed_users = subscribed_users.username.to_list()
 	if username in subscribed_users:
-		user_settings = pd.read_sql(f"SELECT * FROM user_settings WHERE username = '{username}'", asmi)
-		user_settings.is_subscribed = 'False'
-		user_settings.to_sql(name='user_settings', con=asmi, if_exists='append', index=False)
+		# user_settings = pd.read_sql(f"SELECT * FROM user_settings WHERE username = '{username}'", asmi)
+		# user_settings.is_subscribed = 'False'
+		# user_settings.to_sql(name='user_settings', con=asmi, if_exists='append', index=False)
+		asmi.execute(f"UPDATE user_settings SET is_subscribed = False WHERE username = '{username}'")
+
 		bot.send_message(username, f"Спасибо что был с нами, {nickname}! Удачи!")
 
 

@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="postgreSQL@localhost" uuid="a50f211a-78c0-4570-bfc6-6d1dcfc3377d">
-      <driver-ref>postgresql</driver-ref>
-      <synchronize>true</synchronize>
-      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
-      <jdbc-url>jdbc:postgresql://localhost:5432/antiSMI</jdbc-url>
-      <working-dir>$ProjectFileDir$</working-dir>
-    </data-source>
     <data-source source="LOCAL" name="maxlethal_asmi@pg2.sweb.ru" uuid="a7bd4fca-3484-4a58-95eb-01e579546a8d">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>

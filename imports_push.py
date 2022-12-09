@@ -80,4 +80,4 @@ help_text = ("🤖 Инструкция по применению 📗\n"
 
 # pd.set_option('max_colwidth', 120)
 # pd.set_option('display.width', 500)
-# pd.set_option('mode.chained_assignment', None)
+pd.set_option('mode.chained_assignment', None)  # убирает предупреждения о возможном конфликте в цепочках присвоений
