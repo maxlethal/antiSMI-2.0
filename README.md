@@ -2,7 +2,7 @@
 Make @antiSBI_bot remote and public (again)
 
 It is a flexible and personal news aggregator that works in Telegram.
-You can try it in [just now](https://t.me/antiSMI_bot)
+You can try it [just now](https://t.me/antiSMI_bot)
 
 
 ## About
