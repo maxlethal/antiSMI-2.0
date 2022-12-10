@@ -20,7 +20,7 @@ You can try it in [just now](https://t.me/antiSMI_bot)
 * migrate databases from local Sqlite into remote Postgresql  [done]
 * time mashine - news from the past (5, 10, 20 years ago) [in progress]
 
-### Coming soon:
+* ### Coming soon:
 * improve news classification model
 * improve news summarization model (optional)
 * customizing news sources
