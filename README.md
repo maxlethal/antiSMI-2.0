@@ -7,7 +7,7 @@ You can try it [just now](https://t.me/antiSMI_bot)
 
 ## About
 * [Telegram-bot @antiSMI_bot](https://t.me/antiSMI_bot)
-* [Bot concept](https://1drv.ms/p/s!AhSi3BGNZZG0wIYqQnmkjIZzLdG4bQ?e=HpIGLe "Презентация")
+* [Bot concept](https://1drv.ms/p/s!AhSi3BGNZZG0wIYqQnmkjIZzLdG4bQ?e=HpIGLe "Презентация") (rus)
 
 ## [v 1.0](https://github.com/maxlethal/antiSMI-1.0)
 * 15 russian news sources
