@@ -7,7 +7,7 @@ Make @antiSBI_bot remote and public (again)
 * [Bot concept](https://1drv.ms/p/s!AhSi3BGNZZG0wIYqQnmkjIZzLdG4bQ?e=HpIGLe "Презентация")
 
 ## v 1.0
-* ~ 15 russian news sources
+* 15 russian news sources
 * collects 6 categories of news: sciense, politics, economy, technology, entertainment, sports
 * personal news settings
 * personal news digests 4 times a day
