@@ -96,7 +96,7 @@ def all_news2dict(channel_name: str) -> dict:
 	return articles_dict
 
 
-def agency2db(channel_name: str) -> pd.DataFrame:
+def agency2db(channel_name: str) -> int:
 	"""
 	channel_name -> channel_dict -> pd.df(channel_news) -> wright to bd
 	Получает словарь текущего СМИ по его названию и записывает его в БД, предварительно обработав
@@ -112,25 +112,38 @@ def agency2db(channel_name: str) -> pd.DataFrame:
 		df['url'] = df.index
 		df['url'] = df.apply(lambda x: ('https://t.me/' + str(x[6]) + '/' + str(x[7])), axis=1)
 		df.to_sql(name='news', con=asmi, if_exists='append', index=False)
-		return df
+		return len(df)
 
 
 async def join_all(agency_list: list):
 	"""Передаёт список СМИ на последовательную обработку для записи свежих новостей в базу, записывает лог"""
+	log_dict = {}
+	log_list = []
 	start_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi)['count'].to_list()[0])
 	start_time = pd.to_datetime("today")
+
 	print(f'Начинаю сбор текущих новостей:\n')
 	for agency in agency_list:
 		print(f'Собираю {agency}...')
 		try:
-			agency2db(agency)
+			start_parse_time = pd.to_datetime("today")
+			amount_agency_news = agency2db(agency)
+			finish_parse_time = pd.to_datetime("today")
+			parse_duration = str(pd.to_timedelta(finish_parse_time - start_parse_time))
+			agency_dict = {'agency': agency, 'amount': amount_agency_news, 'duration': parse_duration}
+			log_list.append(agency_dict)
 		except TypeError:
 			pass
 		print(f'................... complited')
+
 	end_news_amount = int(pd.read_sql(f"SELECT count(*) FROM news", asmi)['count'].to_list()[0])
 	finish_time = pd.to_datetime("today")
 	duration = str(pd.to_timedelta(finish_time - start_time))
 	news_amount = end_news_amount - start_news_amount
+	log_dict[f'{str(start_time)}'] = {'agencies': log_list, 'news_amount': news_amount, 'duration': duration}
+	with open('log.pickle', 'wb') as handle:
+		pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 	print(f'\nСобрано {news_amount} новостей за {duration}')
 	print(f'Завершено в {str(datetime.now().time())}\n')
 	print(f'-------------------------------------------------------------------------------------------\n')

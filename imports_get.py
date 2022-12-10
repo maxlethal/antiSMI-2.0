@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import create_engine
+import pickle
 
 import requests
 from bs4 import BeautifulSoup
