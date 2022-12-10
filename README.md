@@ -19,6 +19,7 @@ You can try it [just now](https://t.me/antiSMI_bot)
 * expand the number of news sources to 40 [done]
 * migrate databases from local Sqlite into remote Postgresql  [done]
 * time mashine - news from the past (5, 10, 20 years ago) [in progress]
+* implement logging proccess [in progress]
 
 * ### Coming soon:
 * improve news classification model
